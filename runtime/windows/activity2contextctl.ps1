@@ -91,6 +91,7 @@ switch ($Command) {
         "-File", $observerScript,
         "-Workspace", [string]$config.workspace,
         "-LogFile", [string]$config.behaviorLog,
+        "-EntitiesLog", [string]$config.entitiesLog,
         "-BrowserThreshold", [string]$config.observer.browserThreshold,
         "-BrowserUpdateInterval", [string]$config.observer.browserUpdateInterval,
         "-AppThreshold", [string]$config.observer.appThreshold,

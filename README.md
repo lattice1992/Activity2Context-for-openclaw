@@ -17,6 +17,21 @@ This keeps context stable and low-token even when skill routing is imperfect.
 - Integration model: injected workspace memory file via OpenClaw bootstrap hooks
 - Status: optimized for OpenClaw workflows first, other agent frameworks second
 
+## Workshop Mode (No Git Required, Windows)
+
+If your team is non-technical, use this path:
+
+1. Download ZIP from GitHub (`Code` -> `Download ZIP`)
+2. Unzip to a local folder
+3. Double-click:
+- `easy-install-windows.bat` (install + start)
+- `easy-status-windows.bat` (health check)
+- `easy-open-memory-windows.bat` (open generated memory)
+
+Chinese step-by-step guide:
+- `WORKSHOP_QUICKSTART_CN.md`
+- `INSTALL_GITHUB_ONLY_CN.md` (GitHub-only path)
+
 ## What it produces
 
 - `activity2context_behavior.md` (raw-ish behavioral stream)

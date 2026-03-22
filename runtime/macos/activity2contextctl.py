@@ -128,6 +128,8 @@ def main() -> int:
                 workspace,
                 "--log-file",
                 behavior_log,
+                "--entities-log",
+                entities_log,
                 "--browser-threshold",
                 str(int(observer_cfg.get("browserThreshold", 5))),
                 "--browser-update-interval",

@@ -5,7 +5,7 @@ import os
 import subprocess
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Iterable, Optional, Set, Tuple
 
 
 BROWSER_APP_MAP = {
@@ -48,6 +48,10 @@ class ObserverState:
 
 def clean(value: str) -> str:
     return (value or "").replace("\r", " ").replace("\n", " ").strip()
+
+
+def norm_path(path: str) -> str:
+    return os.path.normcase(os.path.abspath(os.path.expanduser(path or "")))
 
 
 def run_osascript(lines: Iterable[str]) -> str:
@@ -208,7 +212,7 @@ def write_or_update_app_log(log_file: str, mode: str, seconds: int, app: str, ti
     print(line, flush=True)
 
 
-def iter_workspace_files(workspace: str) -> Iterable[str]:
+def iter_workspace_files(workspace: str, internal_paths: Set[str]) -> Iterable[str]:
     for root, dirs, files in os.walk(workspace):
         dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
         for name in files:
@@ -217,13 +221,15 @@ def iter_workspace_files(workspace: str) -> Iterable[str]:
             path = os.path.join(root, name)
             if ".openclaw" in path:
                 continue
+            if norm_path(path) in internal_paths:
+                continue
             yield path
 
 
-def scan_file_events(workspace: str, state: ObserverState, log_file: str) -> None:
+def scan_file_events(workspace: str, state: ObserverState, log_file: str, internal_paths: Set[str]) -> None:
     now = dt.datetime.now()
     current: Dict[str, float] = {}
-    for path in iter_workspace_files(workspace):
+    for path in iter_workspace_files(workspace, internal_paths):
         try:
             mtime = os.path.getmtime(path)
         except OSError:
@@ -269,6 +275,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--workspace", default=os.getcwd())
     parser.add_argument("--log-file", default=os.path.expanduser("~/.activity2context/data/activity2context_behavior.md"))
+    parser.add_argument("--entities-log", default="")
     parser.add_argument("--browser-threshold", type=int, default=5)
     parser.add_argument("--browser-update-interval", type=int, default=10)
     parser.add_argument("--app-threshold", type=int, default=5)
@@ -279,6 +286,10 @@ def main() -> int:
 
     workspace = os.path.abspath(os.path.expanduser(args.workspace))
     log_file = os.path.abspath(os.path.expanduser(args.log_file))
+    entities_log = os.path.abspath(os.path.expanduser(args.entities_log)) if args.entities_log else ""
+    internal_paths = {norm_path(log_file)}
+    if entities_log:
+        internal_paths.add(norm_path(entities_log))
     stop_flag = os.path.join(os.path.dirname(log_file), "stop.flag")
 
     state = ObserverState()
@@ -299,7 +310,7 @@ def main() -> int:
         while True:
             now_ts = time.time()
             if now_ts >= next_scan:
-                scan_file_events(workspace, state, log_file)
+                scan_file_events(workspace, state, log_file, internal_paths)
                 next_scan = now_ts + max(1, args.file_scan_interval)
 
             if os.path.exists(stop_flag):

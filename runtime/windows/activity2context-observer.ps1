@@ -1,6 +1,7 @@
 param(
   [string]$Workspace = (Get-Location).Path,
   [string]$LogFile = "$env:USERPROFILE\.activity2context\data\activity2context_behavior.md",
+  [string]$EntitiesLog = "",
   [int]$BrowserThreshold = 5,
   [int]$BrowserUpdateInterval = 10,
   [int]$AppThreshold = 5,
@@ -43,6 +44,24 @@ $script:State = @{
 $script:FileThrottle = @{}
 $script:BrowserProcs = @("chrome", "msedge", "brave", "firefox")
 $script:IgnoreProcs = @("explorer", "taskmgr", "shellexperiencehost", "searchhost", "idle", "system", "unknown")
+$script:InternalPaths = @{}
+
+function Normalize-Path([string]$pathValue) {
+  if (-not $pathValue) { return "" }
+  try {
+    $full = [System.IO.Path]::GetFullPath($pathValue)
+    return $full.Replace("/", "\").Trim().ToLowerInvariant()
+  } catch {
+    return $pathValue.Replace("/", "\").Trim().ToLowerInvariant()
+  }
+}
+
+function Add-InternalPath([string]$pathValue) {
+  $normalized = Normalize-Path $pathValue
+  if ($normalized) {
+    $script:InternalPaths[$normalized] = $true
+  }
+}
 
 function Resolve-BrowserFromTitle([string]$title) {
   if (-not $title) { return $null }
@@ -254,11 +273,16 @@ function Handle-FileEvent($eventArgs) {
   $name = $eventArgs.Name
   $action = $eventArgs.ChangeType
   $fullPath = [System.IO.Path]::GetFullPath($path)
+  $normalized = Normalize-Path $fullPath
+  if ($script:InternalPaths.ContainsKey($normalized)) { return }
+
   $script:State.LastDocumentPath = $fullPath
   Write-BehaviorLog "DOCUMENT" "Action:$action | Name:$name | Path:$fullPath"
 }
 
 $stopFile = Join-Path ([System.IO.Path]::GetDirectoryName($LogFile)) "stop.flag"
+Add-InternalPath $LogFile
+Add-InternalPath $EntitiesLog
 Write-Host "Observer started. Monitoring $Workspace" -ForegroundColor Green
 Write-BehaviorLog "SYSTEM" "Observer started. Workspace=$Workspace Poll=${PollSeconds}s BrowserFirstLogSeconds=${BrowserThreshold}s BrowserUpdateInterval=${BrowserUpdateInterval}s AppThreshold=${AppThreshold}s AppUpdateInterval=${AppUpdateInterval}s"
 
