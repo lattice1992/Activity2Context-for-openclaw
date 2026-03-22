@@ -1,6 +1,7 @@
 # Activity2Context (for OpenClaw)
 
 OpenClaw-focused, always-on local runtime that converts fragmented activity logs into compact context entities.
+100% Local & Private: All activity logging happens entirely on your local machine. No data is sent to the cloud. It's designed to be read locally by your local or API-driven agent.
 
 ## Positioning
 
