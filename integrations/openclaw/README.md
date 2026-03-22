@@ -1,4 +1,4 @@
-# OpenClaw Integration
+# OpenClaw Integration (Primary)
 
 `Activity2Context` is designed as an always-on runtime, not only as a skill.
 

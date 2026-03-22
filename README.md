@@ -1,6 +1,6 @@
-# Activity2Context
+# Activity2Context (for OpenClaw)
 
-Always-on local runtime that converts fragmented user activity logs into compact context entities for AI agents.
+OpenClaw-focused, always-on local runtime that converts fragmented activity logs into compact context entities.
 
 ## Positioning
 
@@ -9,6 +9,12 @@ Always-on local runtime that converts fragmented user activity logs into compact
 - Adapter layer (optional): expose maintenance actions to an agent skill
 
 This keeps context stable and low-token even when skill routing is imperfect.
+
+## Scope
+
+- Primary target: OpenClaw
+- Integration model: injected workspace memory file via OpenClaw bootstrap hooks
+- Status: optimized for OpenClaw workflows first, other agent frameworks second
 
 ## What it produces
 
