@@ -1,0 +1,10 @@
+*.log
+*.pid
+*.flag
+*.pyc
+__pycache__/
+config.local.json
+memory.md
+data/
+run/
+config.json

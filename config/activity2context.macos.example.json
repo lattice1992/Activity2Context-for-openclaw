@@ -1,0 +1,21 @@
+{
+  "workspace": "/Users/yourname/workspace",
+  "behaviorLog": "/Users/yourname/workspace/.openclaw/activity2context_behavior.md",
+  "entitiesLog": "/Users/yourname/workspace/activity2context/memory.md",
+  "observer": {
+    "pollSeconds": 2,
+    "browserThreshold": 5,
+    "browserUpdateInterval": 10,
+    "appThreshold": 5,
+    "appUpdateInterval": 10
+  },
+  "indexer": {
+    "intervalSeconds": 60,
+    "minDurationSeconds": 10,
+    "maxAgeMinutes": 60,
+    "maxTotal": 10,
+    "maxWeb": 3,
+    "maxDoc": 4,
+    "maxApp": 3
+  }
+}
