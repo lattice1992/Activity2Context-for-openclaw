@@ -109,6 +109,7 @@ Template:
 
 Key controls:
 - observer thresholds and poll interval
+- raw behavior cap: `observer.maxBehaviorLines` (default `5000`, trimmed once at startup)
 - indexer interval and entity limits
 - workspace and output paths
 

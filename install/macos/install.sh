@@ -61,7 +61,8 @@ cfg = {
     "browserThreshold": 5,
     "browserUpdateInterval": 10,
     "appThreshold": 5,
-    "appUpdateInterval": 10
+    "appUpdateInterval": 10,
+    "maxBehaviorLines": 5000
   },
   "indexer": {
     "intervalSeconds": 60,

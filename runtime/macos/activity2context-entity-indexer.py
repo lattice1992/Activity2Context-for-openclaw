@@ -6,7 +6,9 @@ import re
 from typing import Dict, List
 
 
-LINE_PATTERN = re.compile(r"^\* \[(?P<time>\d{2}:\d{2}:\d{2})\] \*\*(?P<type>[A-Z]+)\*\*: (?P<details>.+)$")
+LINE_PATTERN = re.compile(
+    r"^\* \[(?P<time>(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2})\] \*\*(?P<type>[A-Z]+)\*\*: (?P<details>.+)$"
+)
 BROWSER_PATTERN = re.compile(r"^(?P<mode>Stay|Focus):(?P<sec>\d+)s \| Title:(?P<title>.*?) \| URL:(?P<url>.+)$")
 APP_PATTERN = re.compile(
     r"^(?P<mode>Stay|Focus):(?P<sec>\d+)s \| App:(?P<app>[^|]+) \| Title:(?P<title>[^|]*)(?: \| RecentDoc:(?P<doc>.+))?$"
@@ -27,11 +29,20 @@ def normalize_app_name(app: str) -> str:
     return x
 
 
-def parse_log_time(time_text: str, now: dt.datetime) -> dt.datetime:
-    value = dt.datetime.strptime(f"{now:%Y-%m-%d} {time_text}", "%Y-%m-%d %H:%M:%S")
-    if value > now + dt.timedelta(minutes=1):
-        value -= dt.timedelta(days=1)
-    return value
+def parse_event_time(time_text: str, now: dt.datetime) -> dt.datetime:
+    raw = clean(time_text)
+    try:
+        return dt.datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        pass
+
+    try:
+        value = dt.datetime.strptime(f"{now:%Y-%m-%d} {raw}", "%Y-%m-%d %H:%M:%S")
+        if value > now + dt.timedelta(minutes=1):
+            value -= dt.timedelta(days=1)
+        return value
+    except ValueError:
+        return now
 
 
 def ensure_entity(container: Dict[str, dict], key: str, kind: str) -> dict:
@@ -97,7 +108,7 @@ def main() -> int:
         if not m:
             continue
 
-        event_time = parse_log_time(m.group("time"), now)
+        event_time = parse_event_time(m.group("time"), now)
         event_type = m.group("type")
         details = m.group("details")
 

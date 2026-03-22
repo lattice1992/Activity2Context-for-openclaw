@@ -137,9 +137,31 @@ def ensure_log_file(log_file: str) -> None:
             f.write(f"# Activity2Context Behavior Context - {dt.datetime.now():%Y-%m-%d}\n")
 
 
+def trim_behavior_log_once(log_file: str, max_behavior_lines: int) -> None:
+    if max_behavior_lines <= 0:
+        return
+    if not os.path.exists(log_file):
+        return
+
+    with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+        lines = f.read().splitlines()
+    if not lines:
+        return
+
+    has_header = lines[0].startswith("#")
+    events = lines[1:] if has_header else lines
+    if len(events) <= max_behavior_lines:
+        return
+
+    kept = events[-max_behavior_lines:]
+    out = ([lines[0]] + kept) if has_header else kept
+    with open(log_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(out) + ("\n" if out else ""))
+
+
 def write_behavior_log(log_file: str, kind: str, details: str) -> None:
     ensure_log_file(log_file)
-    timestamp = dt.datetime.now().strftime("%H:%M:%S")
+    timestamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"* [{timestamp}] **{kind}**: {details}"
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(line + "\n")
@@ -150,7 +172,7 @@ def write_or_update_browser_log(log_file: str, mode: str, seconds: int, title: s
     ensure_log_file(log_file)
     title = clean(title)
     url = clean(url) or "URL Unknown"
-    timestamp = dt.datetime.now().strftime("%H:%M:%S")
+    timestamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"* [{timestamp}] **BROWSER**: {mode}:{seconds}s | Title:{title} | URL:{url}"
 
     with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
@@ -185,7 +207,7 @@ def write_or_update_app_log(log_file: str, mode: str, seconds: int, app: str, ti
     details = f"{mode}:{seconds}s | App:{app} | Title:{title}"
     if recent_doc:
         details += f" | RecentDoc:{clean(recent_doc)}"
-    timestamp = dt.datetime.now().strftime("%H:%M:%S")
+    timestamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"* [{timestamp}] **APP**: {details}"
 
     with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
@@ -282,6 +304,7 @@ def main() -> int:
     parser.add_argument("--app-update-interval", type=int, default=10)
     parser.add_argument("--poll-seconds", type=int, default=2)
     parser.add_argument("--file-scan-interval", type=int, default=3)
+    parser.add_argument("--max-behavior-lines", type=int, default=5000)
     args = parser.parse_args()
 
     workspace = os.path.abspath(os.path.expanduser(args.workspace))
@@ -294,6 +317,7 @@ def main() -> int:
 
     state = ObserverState()
     ensure_log_file(log_file)
+    trim_behavior_log_once(log_file, int(args.max_behavior_lines))
     write_behavior_log(
         log_file,
         "SYSTEM",

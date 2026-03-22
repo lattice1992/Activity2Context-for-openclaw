@@ -55,10 +55,14 @@ openclaw config set "hooks.internal.entries.bootstrap-extra-files.paths[0]" "act
 1. 为什么没有 `memory.md`？
 等待 1-2 分钟，并进行一些操作（切应用、打开网页、编辑文件），再检查。
 
-2. 必须放到 OpenClaw 安装目录吗？
+2. raw behavior 会不会无限变大？
+默认不会无限增长。启动时会自动保留最近 `5000` 行（可配置）。
+配置位置：`~/.activity2context/config.json` 的 `observer.maxBehaviorLines`。
+
+3. 必须放到 OpenClaw 安装目录吗？
 不需要。关键是 `-Workspace` 必须是当前 OpenClaw 工作区。
 
-3. 想停止后台服务怎么办？
+4. 想停止后台服务怎么办？
 
 ```powershell
 $env:USERPROFILE\.activity2context\activity2context.cmd stop

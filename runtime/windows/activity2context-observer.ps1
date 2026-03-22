@@ -2,6 +2,7 @@ param(
   [string]$Workspace = (Get-Location).Path,
   [string]$LogFile = "$env:USERPROFILE\.activity2context\data\activity2context_behavior.md",
   [string]$EntitiesLog = "",
+  [int]$MaxBehaviorLines = 5000,
   [int]$BrowserThreshold = 5,
   [int]$BrowserUpdateInterval = 10,
   [int]$AppThreshold = 5,
@@ -73,7 +74,7 @@ function Resolve-BrowserFromTitle([string]$title) {
 }
 
 function Write-BehaviorLog([string]$Type, [string]$Details) {
-  $timestamp = Get-Date -Format "HH:mm:ss"
+  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
   $date = Get-Date -Format "yyyy-MM-dd"
   $line = "* [$timestamp] **$Type**: $Details"
 
@@ -88,7 +89,7 @@ function Write-BehaviorLog([string]$Type, [string]$Details) {
 function Write-OrUpdate-BrowserLog([string]$Mode, [int]$Seconds, [string]$Title, [string]$URL) {
   if (-not $Title) { $Title = "" }
   if (-not $URL) { $URL = "URL Unknown" }
-  $timestamp = Get-Date -Format "HH:mm:ss"
+  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
   $date = Get-Date -Format "yyyy-MM-dd"
   $line = "* [$timestamp] **BROWSER**: ${Mode}:$($Seconds)s | Title:$Title | URL:$URL"
 
@@ -99,7 +100,7 @@ function Write-OrUpdate-BrowserLog([string]$Mode, [int]$Seconds, [string]$Title,
   $lines = Get-Content -Path $LogFile -Encoding UTF8
   $lastBrowserIndex = -1
   for ($i = $lines.Count - 1; $i -ge 0; $i--) {
-    if ($lines[$i] -match '^\* \[[0-9]{2}:[0-9]{2}:[0-9]{2}\] \*\*BROWSER\*\*:') {
+    if ($lines[$i] -match '^\* \[(?:\d{4}-\d{2}-\d{2} )?[0-9]{2}:[0-9]{2}:[0-9]{2}\] \*\*BROWSER\*\*:') {
       $lastBrowserIndex = $i
       break
     }
@@ -123,7 +124,7 @@ function Write-OrUpdate-BrowserLog([string]$Mode, [int]$Seconds, [string]$Title,
 function Write-OrUpdate-AppLog([string]$Mode, [int]$Seconds, [string]$App, [string]$Title, [string]$RecentDoc) {
   if (-not $App) { $App = "unknown" }
   if (-not $Title) { $Title = "" }
-  $timestamp = Get-Date -Format "HH:mm:ss"
+  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
   $date = Get-Date -Format "yyyy-MM-dd"
 
   $details = "${Mode}:$($Seconds)s | App:$App | Title:$Title"
@@ -139,7 +140,7 @@ function Write-OrUpdate-AppLog([string]$Mode, [int]$Seconds, [string]$App, [stri
   $lines = Get-Content -Path $LogFile -Encoding UTF8
   $lastAppIndex = -1
   for ($i = $lines.Count - 1; $i -ge 0; $i--) {
-    if ($lines[$i] -match '^\* \[[0-9]{2}:[0-9]{2}:[0-9]{2}\] \*\*APP\*\*:') {
+    if ($lines[$i] -match '^\* \[(?:\d{4}-\d{2}-\d{2} )?[0-9]{2}:[0-9]{2}:[0-9]{2}\] \*\*APP\*\*:') {
       $lastAppIndex = $i
       break
     }
@@ -158,6 +159,22 @@ function Write-OrUpdate-AppLog([string]$Mode, [int]$Seconds, [string]$App, [stri
   }
 
   Write-Host $line -ForegroundColor Cyan
+}
+
+function Trim-BehaviorLogOnce {
+  if ($MaxBehaviorLines -le 0) { return }
+  if (-not (Test-Path $LogFile)) { return }
+
+  $all = @(Get-Content -Path $LogFile -Encoding UTF8)
+  if (-not $all -or $all.Count -eq 0) { return }
+
+  $hasHeader = $all[0].StartsWith("#")
+  $events = if ($hasHeader -and $all.Count -gt 1) { @($all[1..($all.Count - 1)]) } elseif ($hasHeader) { @() } else { @($all) }
+  if ($events.Count -le $MaxBehaviorLines) { return }
+
+  $kept = $events[($events.Count - $MaxBehaviorLines)..($events.Count - 1)]
+  $output = if ($hasHeader) { @($all[0]) + @($kept) } else { @($kept) }
+  Set-Content -Path $LogFile -Value $output -Encoding UTF8
 }
 
 function Get-URLFromHwnd([IntPtr]$Hwnd, [string]$ProcessName) {
@@ -283,6 +300,15 @@ function Handle-FileEvent($eventArgs) {
 $stopFile = Join-Path ([System.IO.Path]::GetDirectoryName($LogFile)) "stop.flag"
 Add-InternalPath $LogFile
 Add-InternalPath $EntitiesLog
+if (!(Test-Path $LogFile)) {
+  $logDir = [System.IO.Path]::GetDirectoryName($LogFile)
+  if ($logDir -and -not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+  }
+  $date = Get-Date -Format "yyyy-MM-dd"
+  "# Activity2Context Behavior Context - $date`n" | Out-File $LogFile -Encoding UTF8
+}
+Trim-BehaviorLogOnce
 Write-Host "Observer started. Monitoring $Workspace" -ForegroundColor Green
 Write-BehaviorLog "SYSTEM" "Observer started. Workspace=$Workspace Poll=${PollSeconds}s BrowserFirstLogSeconds=${BrowserThreshold}s BrowserUpdateInterval=${BrowserUpdateInterval}s AppThreshold=${AppThreshold}s AppUpdateInterval=${AppUpdateInterval}s"
 

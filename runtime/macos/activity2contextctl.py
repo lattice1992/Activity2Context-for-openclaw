@@ -140,6 +140,8 @@ def main() -> int:
                 str(int(observer_cfg.get("appUpdateInterval", 10))),
                 "--poll-seconds",
                 str(int(observer_cfg.get("pollSeconds", 2))),
+                "--max-behavior-lines",
+                str(int(observer_cfg.get("maxBehaviorLines", 5000))),
             ]
             proc = subprocess.Popen(obs_cmd, stdout=obs_log, stderr=obs_log)
             observer_pid = proc.pid

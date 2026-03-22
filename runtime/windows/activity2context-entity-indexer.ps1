@@ -18,16 +18,31 @@ function Normalize-AppName([string]$app) {
   return $x
 }
 
-function Parse-LogTime([string]$timeText, [datetime]$now) {
-  $dt = [datetime]::ParseExact(
-    "$($now.ToString('yyyy-MM-dd')) $timeText",
-    "yyyy-MM-dd HH:mm:ss",
-    [System.Globalization.CultureInfo]::InvariantCulture
-  )
-  if ($dt -gt $now.AddMinutes(1)) {
-    return $dt.AddDays(-1)
+function Parse-EventTime([string]$timeText, [datetime]$now) {
+  if (-not $timeText) { return $now }
+  $raw = $timeText.Trim()
+
+  try {
+    return [datetime]::ParseExact(
+      $raw,
+      "yyyy-MM-dd HH:mm:ss",
+      [System.Globalization.CultureInfo]::InvariantCulture
+    )
+  } catch {}
+
+  try {
+    $dt = [datetime]::ParseExact(
+      "$($now.ToString('yyyy-MM-dd')) $raw",
+      "yyyy-MM-dd HH:mm:ss",
+      [System.Globalization.CultureInfo]::InvariantCulture
+    )
+    if ($dt -gt $now.AddMinutes(1)) {
+      return $dt.AddDays(-1)
+    }
+    return $dt
+  } catch {
+    return $now
   }
-  return $dt
 }
 
 function Clean([string]$value) {
@@ -66,7 +81,7 @@ $webMap = @{}
 $docMap = @{}
 $appMap = @{}
 
-$linePattern = '^\* \[(?<time>\d{2}:\d{2}:\d{2})\] \*\*(?<type>[A-Z]+)\*\*: (?<details>.+)$'
+$linePattern = '^\* \[(?<time>(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2})\] \*\*(?<type>[A-Z]+)\*\*: (?<details>.+)$'
 $browserPattern = '^(?<mode>Stay|Focus):(?<sec>\d+)s \| Title:(?<title>.*?) \| URL:(?<url>.+)$'
 $appPattern = '^(?<mode>Stay|Focus):(?<sec>\d+)s \| App:(?<app>[^|]+) \| Title:(?<title>[^|]*)(?: \| RecentDoc:(?<doc>.+))?$'
 $docPattern = '^Action:(?<action>\w+) \| Name:(?<name>.*?) \| Path:(?<path>.+)$'
@@ -75,7 +90,7 @@ $lines = Get-Content -Path $InputLog -Encoding UTF8
 foreach ($line in $lines) {
   if ($line -notmatch $linePattern) { continue }
 
-  $eventTime = Parse-LogTime -timeText $Matches.time -now $now
+  $eventTime = Parse-EventTime -timeText $Matches.time -now $now
   $type = $Matches.type
   $details = $Matches.details
 

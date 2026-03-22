@@ -38,6 +38,7 @@ if (-not (Test-Path $configPath)) {
       browserUpdateInterval = 10
       appThreshold = 5
       appUpdateInterval = 10
+      maxBehaviorLines = 5000
     }
     indexer = [ordered]@{
       intervalSeconds = 60

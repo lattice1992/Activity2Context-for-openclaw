@@ -85,6 +85,14 @@ switch ($Command) {
 
     $observerPid = Get-AlivePid $observerPidFile
     if (-not $observerPid) {
+      $maxBehaviorLines = 5000
+      if ($config.observer -and ($config.observer.PSObject.Properties.Name -contains "maxBehaviorLines")) {
+        $rawMax = [string]$config.observer.maxBehaviorLines
+        if ($rawMax) {
+          $maxBehaviorLines = [int]$rawMax
+        }
+      }
+
       $observerArgs = @(
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
@@ -92,6 +100,7 @@ switch ($Command) {
         "-Workspace", [string]$config.workspace,
         "-LogFile", [string]$config.behaviorLog,
         "-EntitiesLog", [string]$config.entitiesLog,
+        "-MaxBehaviorLines", [string]$maxBehaviorLines,
         "-BrowserThreshold", [string]$config.observer.browserThreshold,
         "-BrowserUpdateInterval", [string]$config.observer.browserUpdateInterval,
         "-AppThreshold", [string]$config.observer.appThreshold,
