@@ -48,6 +48,8 @@ if (-not (Test-Path $configPath)) {
       maxWeb = 3
       maxDoc = 4
       maxApp = 3
+      semanticOutput = (Join-Path $Workspace "activity2context\memory.semantic.json")
+      appAliases = [ordered]@{}
     }
   }
   $defaultConfig | ConvertTo-Json -Depth 6 | Set-Content -Path $configPath -Encoding UTF8

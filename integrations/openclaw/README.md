@@ -7,17 +7,21 @@
 1. Keep runtime processes always running:
 - observer writes `activity2context_behavior.md`
 - indexer writes `activity2context/memory.md`
+- indexer also writes `activity2context/memory.semantic.json`
 
-2. Inject entities file into prompt as Active Memory:
+2. Inject text memory into prompt as Active Memory:
 - read `activity2context/memory.md` before each agent turn
 - prepend a short block such as:
 
 ```text
-[ACTIVE MEMORY]
+[Active Memory]
 <content of activity2context/memory.md>
 ```
 
-3. Keep integration runtime-only:
+3. Use structured memory for tools or routing (optional):
+- read `activity2context/memory.semantic.json` for machine-friendly entities
+- keep it out of the direct prompt unless needed
+4. Keep integration runtime-only:
 - do not rely on skill invocation for core context collection
 - inject `activity2context/memory.md` directly via OpenClaw hook
 

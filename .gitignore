@@ -5,6 +5,7 @@
 __pycache__/
 config.local.json
 memory.md
+memory.semantic.json
 data/
 run/
 config.json

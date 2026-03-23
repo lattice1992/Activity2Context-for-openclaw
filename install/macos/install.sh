@@ -71,7 +71,9 @@ cfg = {
     "maxTotal": 10,
     "maxWeb": 3,
     "maxDoc": 4,
-    "maxApp": 3
+    "maxApp": 3,
+    "semanticOutput": r"${WORKSPACE}/activity2context/memory.semantic.json",
+    "appAliases": {}
   }
 }
 with open(r"${CONFIG_PATH}", "w", encoding="utf-8") as f:

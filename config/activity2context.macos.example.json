@@ -17,6 +17,8 @@
     "maxTotal": 10,
     "maxWeb": 3,
     "maxDoc": 4,
-    "maxApp": 3
+    "maxApp": 3,
+    "semanticOutput": "/Users/yourname/workspace/activity2context/memory.semantic.json",
+    "appAliases": {}
   }
 }

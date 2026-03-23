@@ -33,6 +33,7 @@ Outputs:
 
 - Raw stream: `<workspace>/.openclaw/activity2context_behavior.md`
 - Injected memory: `<workspace>/activity2context/memory.md`
+- Structured memory: `<workspace>/activity2context/memory.semantic.json`
 
 ## Common concerns
 
@@ -143,6 +144,8 @@ Key parameters:
 - `indexer.maxWeb`
 - `indexer.maxDoc`
 - `indexer.maxApp`
+- `indexer.semanticOutput` (structured JSON output path)
+- `indexer.appAliases` (normalize process names, optional type hints)
 
 ## Uninstall
 

@@ -191,9 +191,20 @@ switch ($Command) {
   }
 
   "index" {
+    $semanticOutput = ""
+    if ($config.indexer -and ($config.indexer.PSObject.Properties.Name -contains "semanticOutput")) {
+      $semanticOutput = [string]$config.indexer.semanticOutput
+    }
+    $appAliasesJson = "{}"
+    if ($config.indexer -and ($config.indexer.PSObject.Properties.Name -contains "appAliases") -and $config.indexer.appAliases) {
+      $appAliasesJson = ($config.indexer.appAliases | ConvertTo-Json -Depth 12 -Compress)
+    }
+
     & $indexerScript `
       -InputLog $config.behaviorLog `
       -OutputFile $config.entitiesLog `
+      -SemanticOutputFile $semanticOutput `
+      -AppAliasesJson $appAliasesJson `
       -MinDurationSeconds ([int]$config.indexer.minDurationSeconds) `
       -MaxAgeMinutes ([int]$config.indexer.maxAgeMinutes) `
       -MaxTotal ([int]$config.indexer.maxTotal) `
