@@ -34,7 +34,25 @@ Outputs:
 - Raw stream: `<workspace>/.openclaw/activity2context_behavior.md`
 - Injected memory: `<workspace>/activity2context/memory.md`
 
-## Why logs do not grow forever
+## Common concerns
+
+### 1) Will token cost increase a lot?
+
+Usually no. Only aggregated `memory.md` is injected, not full raw logs.
+Entity count is capped and ranked by recency/activity.
+
+### 2) Is it safe for privacy?
+
+By default, data is generated and stored locally.
+However, if you use cloud models, injected `memory.md` content is sent with prompts to your model provider.
+For sensitive environments, prefer local models or narrower capture scope.
+
+### 3) Will it hurt performance?
+
+The runtime is lightweight (polling + periodic aggregation).
+Raw logs are capped and trimmed, preventing unbounded I/O growth.
+
+### 4) Will the logs grow indefinitely??
 
 - Raw log cap: `observer.maxBehaviorLines` (default `5000`).
 - Auto-trim on startup to keep only the latest N lines.
@@ -98,28 +116,6 @@ openclaw config set "hooks.internal.entries.bootstrap-extra-files.paths[0]" "act
 
 More details: `integrations/openclaw/README.md`
 
-## Common concerns
-
-### 1) Will token cost increase a lot?
-
-Usually no. Only aggregated `memory.md` is injected, not full raw logs.
-Entity count is capped and ranked by recency/activity.
-
-### 2) Is it safe for privacy?
-
-By default, data is generated and stored locally.
-However, if you use cloud models, injected `memory.md` content is sent with prompts to your model provider.
-For sensitive environments, prefer local models or narrower capture scope.
-
-### 3) Will it hurt performance?
-
-The runtime is lightweight (polling + periodic aggregation).
-Raw logs are capped and trimmed, preventing unbounded I/O growth.
-
-### 4) Can it capture exact URLs in embedded browsers (for example Steam)?
-
-Not guaranteed. URL capture currently targets standard browser controls.
-Embedded browsers are often captured only at app/window level.
 
 ## Configuration
 
