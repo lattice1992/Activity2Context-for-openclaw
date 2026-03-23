@@ -32,7 +32,25 @@ Activity2Context 是 Runtime Hook，不是 Skill。
 - 原始行为流：`<workspace>/.openclaw/activity2context_behavior.md`
 - 注入记忆：`<workspace>/activity2context/memory.md`
 
-## 为什么不会无限增长
+## 常见问题
+
+### 1) 会不会增加很多 Token 消耗？
+
+通常不会。注入的是聚合结果 `memory.md`，不是全量 raw log。  
+实体数量和时间窗口都有限制。
+
+### 2) 隐私是否安全？
+
+默认所有采集与存储都在本地。  
+但如果你使用云模型，注入到 prompt 的内容会发送给模型提供方。  
+高敏感场景建议使用本地模型或收紧采集范围。
+
+### 3) 性能会受影响吗？
+
+运行机制是轻量轮询 + 周期聚合。  
+并有日志上限裁剪，避免无上限 I/O 增长。
+
+### 4) 记录会不会无限增长？
 
 - 原始日志有上限：`observer.maxBehaviorLines`（默认 5000）。
 - 启动时自动裁剪到最近 N 行。
@@ -95,29 +113,6 @@ openclaw config set "hooks.internal.entries.bootstrap-extra-files.paths[0]" "act
 ```
 
 更多说明见：`integrations/openclaw/README.md`
-
-## 常见担心
-
-### 1) 会不会增加很多 Token 消耗？
-
-通常不会。注入的是聚合结果 `memory.md`，不是全量 raw log。  
-实体数量和时间窗口都有限制。
-
-### 2) 隐私是否安全？
-
-默认所有采集与存储都在本地。  
-但如果你使用云模型，注入到 prompt 的内容会发送给模型提供方。  
-高敏感场景建议使用本地模型或收紧采集范围。
-
-### 3) 性能会受影响吗？
-
-运行机制是轻量轮询 + 周期聚合。  
-并有日志上限裁剪，避免无上限 I/O 增长。
-
-### 4) 像 Steam 这种内置浏览器能抓到精确 URL 吗？
-
-不保证。当前 URL 抓取主要面向标准浏览器控件。  
-内置浏览器通常只能稳定记录到 App 层级。
 
 ## 配置
 
