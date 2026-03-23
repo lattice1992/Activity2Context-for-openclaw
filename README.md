@@ -1,77 +1,60 @@
 # Activity2Context for OpenClaw
 
-English version: `README.en.md`
+Chinese version: `README.zh-CN.md`
 
-想象一个 Agent 能“看你所看，知你所做”。
+Imagine an agent that can "see what you see and track what you do."
 
-当你要高效指挥它时，只需要说目标，不再每轮重复喂背景。
+When you want fast execution, you only provide the goal.
+You do not need to repeatedly feed background context every turn.
 
-## 它解决了什么问题
+## What problem does it solve?
 
-- 背景断层：你明明刚改过文件、看过网页，Agent 却不知道。
-- 沟通成本高：每次都要重复“我刚刚在做什么”。
-- Token 浪费：把原始行为日志直接塞给模型，噪音高、成本高。
+- Context gaps: you just edited files and read pages, but the agent does not know.
+- Repetitive briefing: you keep re-explaining what you were doing.
+- Token waste: raw behavior logs are noisy and expensive if sent directly to models.
 
-## 它怎么工作
+## How it works
 
-Activity2Context 是一个 Runtime Hook，不是 Skill。
+Activity2Context is a Runtime Hook, not a Skill.
 
-它的工作流是：
+Pipeline:
 
-1. Capture：持续采集本机行为（浏览器、文档、应用）。
-2. Aggregate：把原始行为流压缩成结构化实体。
-3. Inject：在每次对话前，把 `activity2context/memory.md` 注入到 OpenClaw system prompt。
+1. Capture: continuously record local activity (browser, document, app).
+2. Aggregate: compress raw streams into structured entities.
+3. Inject: before each chat turn, inject `activity2context/memory.md` into the OpenClaw system prompt.
 
-## 采集范围（当前）
+## What is captured (current)
 
-- Browser：页面标题、URL、停留时长、最近活跃时间。
-- Document：文件路径、编辑次数、最近活跃时间。
-- App：应用名、窗口标题、聚焦时长、最近活跃时间。
+- Browser: page title, URL, focus duration, last active time.
+- Document: file path, edit count, last active time.
+- App: app name, window title, focus duration, last active time.
 
-输出文件：
+Outputs:
 
-- 原始行为流：`<workspace>/.openclaw/activity2context_behavior.md`
-- 注入记忆文件：`<workspace>/activity2context/memory.md`
+- Raw stream: `<workspace>/.openclaw/activity2context_behavior.md`
+- Injected memory: `<workspace>/activity2context/memory.md`
 
-## 为什么它不会无限膨胀
+## Why logs do not grow forever
 
-- 原始日志支持上限：`observer.maxBehaviorLines`（默认 `5000`）。
-- 启动时自动裁剪到最近 N 行（默认 5000）。
-- 记忆文件是聚合结果，不是全量原始日志。
+- Raw log cap: `observer.maxBehaviorLines` (default `5000`).
+- Auto-trim on startup to keep only the latest N lines.
+- Injected file is aggregated memory, not full raw logs.
 
-## 常见担心
+## Quick Start (Windows)
 
-### 1) 会不会大幅增加 Token 消耗？
-
-不会显著增加。注入的是聚合后的 `memory.md`，不是全量 raw log。
-默认只保留有限实体（Web/Doc/App），且按最近活跃度筛选。
-
-### 2) 会不会有隐私风险？
-
-默认数据都在本地生成和存储，不主动上传。
-但如果你使用云模型，注入到 prompt 的 `memory.md` 内容会随请求发给模型提供方。
-如果是高敏感场景，建议本地模型或降低采集范围。
-
-### 3) 会不会影响机器性能？
-
-设计为轻量轮询，默认 2 秒采样，聚合按周期执行。
-并且 raw 文件有上限裁剪，避免无限增长导致 I/O 退化。
-
-### 4) 内置浏览器（如 Steam）能抓到具体 URL 吗？
-
-不保证。当前 URL 抓取主要针对标准浏览器控件。
-内置浏览器通常只能稳定记录到 App 层级，不一定能拿到精确 URL。
-
-
-## 快速开始（Windows）
-
-在仓库根目录执行：
+From repo root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\install\windows\install.ps1 -Workspace "D:\AIproject"
+powershell -ExecutionPolicy Bypass -File .\install\windows\install.ps1 -Workspace "$PWD"
 ```
 
-常用命令：
+If your OpenClaw workspace is different from the current folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install\windows\install.ps1 -Workspace "C:\path\to\your\workspace"
+```
+
+Control commands:
 
 ```powershell
 $env:USERPROFILE\.activity2context\activity2context.cmd status
@@ -80,20 +63,15 @@ $env:USERPROFILE\.activity2context\activity2context.cmd stop
 $env:USERPROFILE\.activity2context\activity2context.cmd index
 ```
 
-零开发背景可直接看：
+## Quick Start (macOS)
 
-- `WORKSHOP_QUICKSTART.zh-CN.md`
-- `INSTALL_GITHUB_ONLY.zh-CN.md`
-
-## 快速开始（macOS）
-
-在仓库根目录执行：
+From repo root:
 
 ```bash
 bash ./install/macos/install.sh --workspace "$PWD"
 ```
 
-常用命令：
+Control commands:
 
 ```bash
 ~/.activity2context/activity2context status
@@ -102,15 +80,15 @@ bash ./install/macos/install.sh --workspace "$PWD"
 ~/.activity2context/activity2context index
 ```
 
-macOS 需要授权：
+Required macOS permissions:
 
-- Accessibility（前台应用与窗口检测）
-- Automation（读取 Chrome/Edge/Brave/Safari URL）
-- Python 3（`/usr/bin/python3`）
+- Accessibility (foreground app/window detection)
+- Automation (read Chrome/Edge/Brave/Safari URL)
+- Python 3 (`/usr/bin/python3`)
 
-## OpenClaw 接入（核心）
+## OpenClaw Integration (core)
 
-只需要保证 `memory.md` 会被注入，不需要 Skill。
+You only need `memory.md` injection. No Skill file is required.
 
 ```bash
 openclaw config set hooks.internal.enabled true --strict-json
@@ -118,27 +96,50 @@ openclaw config set hooks.internal.entries.bootstrap-extra-files.enabled true --
 openclaw config set "hooks.internal.entries.bootstrap-extra-files.paths[0]" "activity2context/memory.md"
 ```
 
-更多见：`integrations/openclaw/README.md`
+More details: `integrations/openclaw/README.md`
 
-## 配置
+## Common concerns
 
-配置文件：
+### 1) Will token cost increase a lot?
+
+Usually no. Only aggregated `memory.md` is injected, not full raw logs.
+Entity count is capped and ranked by recency/activity.
+
+### 2) Is it safe for privacy?
+
+By default, data is generated and stored locally.
+However, if you use cloud models, injected `memory.md` content is sent with prompts to your model provider.
+For sensitive environments, prefer local models or narrower capture scope.
+
+### 3) Will it hurt performance?
+
+The runtime is lightweight (polling + periodic aggregation).
+Raw logs are capped and trimmed, preventing unbounded I/O growth.
+
+### 4) Can it capture exact URLs in embedded browsers (for example Steam)?
+
+Not guaranteed. URL capture currently targets standard browser controls.
+Embedded browsers are often captured only at app/window level.
+
+## Configuration
+
+Config file:
 
 - `~/.activity2context/config.json`
 
-模板：
+Templates:
 
 - `config/activity2context.example.json`
 - `config/activity2context.macos.example.json`
 
-关键参数：
+Key parameters:
 
 - `observer.pollSeconds`
 - `observer.browserThreshold`
 - `observer.browserUpdateInterval`
 - `observer.appThreshold`
 - `observer.appUpdateInterval`
-- `observer.maxBehaviorLines`（默认 5000）
+- `observer.maxBehaviorLines` (default 5000)
 - `indexer.intervalSeconds`
 - `indexer.minDurationSeconds`
 - `indexer.maxAgeMinutes`
@@ -147,21 +148,21 @@ openclaw config set "hooks.internal.entries.bootstrap-extra-files.paths[0]" "act
 - `indexer.maxDoc`
 - `indexer.maxApp`
 
-## 卸载
+## Uninstall
 
-Windows：
+Windows:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install\windows\uninstall.ps1
 ```
 
-macOS：
+macOS:
 
 ```bash
 bash ./install/macos/uninstall.sh
 ```
 
-保留数据仅移除运行时：
+Keep data but remove runtime:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install\windows\uninstall.ps1 -KeepData
