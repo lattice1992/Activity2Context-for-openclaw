@@ -7,6 +7,7 @@
 - 仓库解压到哪里都可以（不是必须放在 OpenClaw 安装目录）。
 - `-Workspace` 必须填写你正在使用的 OpenClaw 工作区路径。
 - 只要 `Workspace` 对，OpenClaw 就能读取 `activity2context/memory.md`。
+- 不需要安装 Skill；这是 Runtime + Prompt Injection 模式。
 
 ## 步骤 1：下载并解压
 

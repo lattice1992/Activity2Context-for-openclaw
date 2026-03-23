@@ -21,7 +21,7 @@ echo %~dp0activity2context\memory.md
 echo.
 echo Next:
 echo 1) Open OpenClaw
-echo 2) Install skill: activity2context-for-openclaw (from ClawHub)
+echo 2) Ensure hook path includes activity2context/memory.md
 echo 3) Send a test message and verify context injection
 echo.
 pause
