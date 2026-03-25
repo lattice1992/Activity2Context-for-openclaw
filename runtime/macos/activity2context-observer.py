@@ -28,6 +28,11 @@ IGNORE_APPS = {
 
 IGNORE_DIRS = {".git", "node_modules", "__pycache__", ".openclaw"}
 IGNORE_SUFFIXES = (".tmp", ".log", "~")
+IGNORE_FILE_NAMES = {
+    "memory.semantic.json",
+    "activity2context-entity-indexer.py",
+    "activity2context-entity-indexer.ps1",
+}
 
 
 @dataclass
@@ -252,6 +257,8 @@ def scan_file_events(workspace: str, state: ObserverState, log_file: str, intern
     now = dt.datetime.now()
     current: Dict[str, float] = {}
     for path in iter_workspace_files(workspace, internal_paths):
+        if os.path.basename(path).lower() in IGNORE_FILE_NAMES:
+            continue
         try:
             mtime = os.path.getmtime(path)
         except OSError:
@@ -298,6 +305,7 @@ def main() -> int:
     parser.add_argument("--workspace", default=os.getcwd())
     parser.add_argument("--log-file", default=os.path.expanduser("~/.activity2context/data/activity2context_behavior.md"))
     parser.add_argument("--entities-log", default="")
+    parser.add_argument("--semantic-log", default="")
     parser.add_argument("--browser-threshold", type=int, default=5)
     parser.add_argument("--browser-update-interval", type=int, default=10)
     parser.add_argument("--app-threshold", type=int, default=5)
@@ -310,9 +318,12 @@ def main() -> int:
     workspace = os.path.abspath(os.path.expanduser(args.workspace))
     log_file = os.path.abspath(os.path.expanduser(args.log_file))
     entities_log = os.path.abspath(os.path.expanduser(args.entities_log)) if args.entities_log else ""
+    semantic_log = os.path.abspath(os.path.expanduser(args.semantic_log)) if args.semantic_log else ""
     internal_paths = {norm_path(log_file)}
     if entities_log:
         internal_paths.add(norm_path(entities_log))
+    if semantic_log:
+        internal_paths.add(norm_path(semantic_log))
     stop_flag = os.path.join(os.path.dirname(log_file), "stop.flag")
 
     state = ObserverState()

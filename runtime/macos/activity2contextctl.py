@@ -130,6 +130,8 @@ def main() -> int:
                 behavior_log,
                 "--entities-log",
                 entities_log,
+                "--semantic-log",
+                str(indexer_cfg.get("semanticOutput", "")),
                 "--browser-threshold",
                 str(int(observer_cfg.get("browserThreshold", 5))),
                 "--browser-update-interval",

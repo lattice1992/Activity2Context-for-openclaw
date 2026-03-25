@@ -86,6 +86,10 @@ switch ($Command) {
     $observerPid = Get-AlivePid $observerPidFile
     if (-not $observerPid) {
       $maxBehaviorLines = 5000
+      $semanticOutput = ""
+      if ($config.indexer -and ($config.indexer.PSObject.Properties.Name -contains "semanticOutput")) {
+        $semanticOutput = [string]$config.indexer.semanticOutput
+      }
       if ($config.observer -and ($config.observer.PSObject.Properties.Name -contains "maxBehaviorLines")) {
         $rawMax = [string]$config.observer.maxBehaviorLines
         if ($rawMax) {
@@ -100,6 +104,7 @@ switch ($Command) {
         "-Workspace", [string]$config.workspace,
         "-LogFile", [string]$config.behaviorLog,
         "-EntitiesLog", [string]$config.entitiesLog,
+        "-SemanticLog", [string]$semanticOutput,
         "-MaxBehaviorLines", [string]$maxBehaviorLines,
         "-BrowserThreshold", [string]$config.observer.browserThreshold,
         "-BrowserUpdateInterval", [string]$config.observer.browserUpdateInterval,

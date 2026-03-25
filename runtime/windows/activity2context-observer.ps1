@@ -2,6 +2,7 @@ param(
   [string]$Workspace = (Get-Location).Path,
   [string]$LogFile = "$env:USERPROFILE\.activity2context\data\activity2context_behavior.md",
   [string]$EntitiesLog = "",
+  [string]$SemanticLog = "",
   [int]$MaxBehaviorLines = 5000,
   [int]$BrowserThreshold = 5,
   [int]$BrowserUpdateInterval = 10,
@@ -46,6 +47,11 @@ $script:FileThrottle = @{}
 $script:BrowserProcs = @("chrome", "msedge", "brave", "firefox")
 $script:IgnoreProcs = @("explorer", "taskmgr", "shellexperiencehost", "searchhost", "idle", "system", "unknown")
 $script:InternalPaths = @{}
+$script:IgnoreFileNames = @(
+  "memory.semantic.json",
+  "activity2context-entity-indexer.py",
+  "activity2context-entity-indexer.ps1"
+)
 
 function Normalize-Path([string]$pathValue) {
   if (-not $pathValue) { return "" }
@@ -292,6 +298,8 @@ function Handle-FileEvent($eventArgs) {
   $fullPath = [System.IO.Path]::GetFullPath($path)
   $normalized = Normalize-Path $fullPath
   if ($script:InternalPaths.ContainsKey($normalized)) { return }
+  $leafName = [System.IO.Path]::GetFileName($fullPath).ToLowerInvariant()
+  if ($script:IgnoreFileNames -contains $leafName) { return }
 
   $script:State.LastDocumentPath = $fullPath
   Write-BehaviorLog "DOCUMENT" "Action:$action | Name:$name | Path:$fullPath"
@@ -300,6 +308,7 @@ function Handle-FileEvent($eventArgs) {
 $stopFile = Join-Path ([System.IO.Path]::GetDirectoryName($LogFile)) "stop.flag"
 Add-InternalPath $LogFile
 Add-InternalPath $EntitiesLog
+Add-InternalPath $SemanticLog
 if (!(Test-Path $LogFile)) {
   $logDir = [System.IO.Path]::GetDirectoryName($LogFile)
   if ($logDir -and -not (Test-Path $logDir)) {
