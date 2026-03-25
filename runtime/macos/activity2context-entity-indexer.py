@@ -48,6 +48,14 @@ def recency_bonus(last_active: dt.datetime, now: dt.datetime) -> float:
     return 0.05 if last_active >= now - dt.timedelta(minutes=10) else 0.0
 
 
+def priority_score(duration: int, last_active: dt.datetime, action_count: int, now: dt.datetime) -> float:
+    age_minutes = max(0.0, (now - last_active).total_seconds() / 60.0)
+    recency_norm = 0.0 if age_minutes >= 1440.0 else (1.0 - (age_minutes / 1440.0))
+    duration_norm = min(1.0, float(duration) / 1800.0)
+    edit_norm = min(1.0, float(action_count) / 8.0)
+    return round((0.55 * recency_norm) + (0.35 * duration_norm) + (0.10 * edit_norm), 4)
+
+
 def parse_event_time(time_text: str, now: dt.datetime) -> dt.datetime:
     raw = clean(time_text)
     try:
@@ -177,6 +185,28 @@ def classify_web(url: str, title: str) -> dict:
         "keywordSignal": keyword_signal,
         "domain": domain,
     }
+
+
+def is_low_value_web(url: str, title: str) -> bool:
+    u = clean(url).lower()
+    t = clean(title).lower()
+    if not u or u == "url unknown":
+        return True
+    if re.match(r"^(about:blank|about:newtab)$", u):
+        return True
+    if re.match(r"^chrome://newtab/?$", u):
+        return True
+    if re.match(r"^edge://newtab/?$", u):
+        return True
+    if re.match(r"^newtab/?$", u):
+        return True
+    if re.match(r"^(new tab|newtab|\u65b0\u6807\u7b7e\u9875|\u7121\u6a19\u984c|\u65e0\u6807\u9898|untitled|blank page)(\s*-\s*.*)?$", t):
+        return True
+    if re.search(r"(new tab|newtab|\u65b0\u6807\u7b7e\u9875|\u7121\u6a19\u984c|\u65e0\u6807\u9898|untitled|blank page)", t):
+        return True
+    if t == "about:blank":
+        return True
+    return False
 
 
 def classify_doc(path: str, name: str) -> dict:
@@ -397,6 +427,7 @@ def write_outputs(
                 "lastActive": active,
                 "type": classify["type"],
                 "confidence": confidence,
+                "priority": round(float(entity.get("PriorityScore", 0.0)), 4),
                 "domain": classify["domain"],
             }
             semantic["web"].append(semantic_web)
@@ -428,6 +459,7 @@ def write_outputs(
                 "lastActive": active,
                 "type": classify["type"],
                 "confidence": confidence,
+                "priority": round(float(entity.get("PriorityScore", 0.0)), 4),
             }
             semantic["docs"].append(semantic_doc)
             semantic["entities"].append(semantic_doc)
@@ -456,6 +488,7 @@ def write_outputs(
                 "lastActive": active,
                 "type": classify["type"],
                 "confidence": confidence,
+                "priority": round(float(entity.get("PriorityScore", 0.0)), 4),
             }
             semantic["apps"].append(semantic_app)
             semantic["entities"].append(semantic_app)
@@ -538,6 +571,8 @@ def main() -> int:
             url = clean(b.group("url"))
             if not url or url == "URL Unknown":
                 continue
+            if is_low_value_web(url, title):
+                continue
 
             key = url.lower()
             entity = ensure_entity(web_map, key, "Web")
@@ -606,22 +641,39 @@ def main() -> int:
                 doc_entity["LastActive"] = event_time
 
     web_entities = sorted(
-        [e for e in web_map.values() if e["LastActive"] >= cutoff and e["DurationSum"] >= args.min_duration_seconds],
-        key=lambda x: x["LastActive"],
+        [
+            {
+                **e,
+                "PriorityScore": priority_score(int(e["DurationSum"]), e["LastActive"], 0, now),
+            }
+            for e in web_map.values()
+            if e["LastActive"] >= cutoff and e["DurationSum"] >= args.min_duration_seconds
+        ],
+        key=lambda x: (x["PriorityScore"], x["LastActive"]),
         reverse=True,
     )
     doc_entities = sorted(
         [
-            e
+            {
+                **e,
+                "PriorityScore": priority_score(int(e["DurationSum"]), e["LastActive"], int(e["ActionCount"]), now),
+            }
             for e in doc_map.values()
             if e["LastActive"] >= cutoff and e["Path"] and e["DurationSum"] >= args.min_duration_seconds
         ],
-        key=lambda x: x["LastActive"],
+        key=lambda x: (x["PriorityScore"], x["LastActive"]),
         reverse=True,
     )
     app_entities = sorted(
-        [e for e in app_map.values() if e["LastActive"] >= cutoff and e["DurationSum"] >= args.min_duration_seconds],
-        key=lambda x: x["LastActive"],
+        [
+            {
+                **e,
+                "PriorityScore": priority_score(int(e["DurationSum"]), e["LastActive"], 0, now),
+            }
+            for e in app_map.values()
+            if e["LastActive"] >= cutoff and e["DurationSum"] >= args.min_duration_seconds
+        ],
+        key=lambda x: (x["PriorityScore"], x["LastActive"]),
         reverse=True,
     )
 
@@ -634,13 +686,13 @@ def main() -> int:
         chosen = {f"{e['Type']}|{e['Key']}" for e in selected}
         leftovers = sorted(
             [e for e in (web_entities + doc_entities + app_entities) if f"{e['Type']}|{e['Key']}" not in chosen],
-            key=lambda x: x["LastActive"],
+            key=lambda x: (x["PriorityScore"], x["LastActive"]),
             reverse=True,
         )
         need = args.max_total - len(selected)
         selected.extend(leftovers[:need])
 
-    selected = sorted(selected, key=lambda x: x["LastActive"], reverse=True)[: args.max_total]
+    selected = sorted(selected, key=lambda x: (x["PriorityScore"], x["LastActive"]), reverse=True)[: args.max_total]
     write_outputs(output_file, args.semantic_output_file, now, args.max_age_minutes, selected)
     return 0
 

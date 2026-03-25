@@ -41,7 +41,7 @@ def main() -> int:
             with open(config_path, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
             idx = cfg.get("indexer", {})
-            interval = max(5, int(idx.get("intervalSeconds", 60)))
+            interval = max(1, int(idx.get("intervalSeconds", 60)))
             cmd = [
                 sys.executable,
                 indexer_script,

@@ -39,6 +39,15 @@ function Get-Recency-Bonus([datetime]$lastActive, [datetime]$now) {
   return 0.0
 }
 
+function Get-PriorityScore([int]$duration, [datetime]$lastActive, [int]$actionCount, [datetime]$now) {
+  $ageMinutes = [Math]::Max(0.0, (($now - $lastActive).TotalMinutes))
+  $recencyNorm = if ($ageMinutes -ge 1440.0) { 0.0 } else { 1.0 - ($ageMinutes / 1440.0) }
+  $durationNorm = [Math]::Min(1.0, ([double]$duration / 1800.0))
+  $editNorm = [Math]::Min(1.0, ([double]$actionCount / 8.0))
+  $score = (0.55 * $recencyNorm) + (0.35 * $durationNorm) + (0.10 * $editNorm)
+  return [Math]::Round($score, 4)
+}
+
 function Parse-EventTime([string]$timeText, [datetime]$now) {
   if (-not $timeText) { return $now }
   $raw = $timeText.Trim()
@@ -297,6 +306,31 @@ function Classify-App([string]$appName, [string]$title, [string]$aliasType) {
   }
 }
 
+function Is-LowValueWeb([string]$url, [string]$title) {
+  $u = (Clean $url).ToLower()
+  $t = (Clean $title).ToLower()
+  if (-not $u) { return $true }
+  if ($u -eq "url unknown") { return $true }
+
+  if (
+    $u -match '^(about:blank|about:newtab)$' -or
+    $u -match '^chrome://newtab/?$' -or
+    $u -match '^edge://newtab/?$' -or
+    $u -match '^newtab/?$'
+  ) {
+    return $true
+  }
+
+  if (
+    $t -match '^(new tab|newtab|\u65b0\u6807\u7b7e\u9875|\u7121\u6a19\u984c|\u65e0\u6807\u9898|untitled|blank page)(\s*-\s*.*)?$' -or
+    $t -match '(new tab|newtab|\u65b0\u6807\u7b7e\u9875|\u7121\u6a19\u984c|\u65e0\u6807\u9898|untitled|blank page)' -or
+    $t -eq "about:blank"
+  ) {
+    return $true
+  }
+  return $false
+}
+
 function Score-Web([pscustomobject]$class, [int]$duration, [datetime]$lastActive, [datetime]$now) {
   $score = 0.30
   if ($class.StrongSignal) { $score += 0.30 }
@@ -373,6 +407,7 @@ foreach ($line in $lines) {
       $title = Clean $Matches.title
       $url = Clean $Matches.url
       if (-not $url -or $url -eq "URL Unknown") { continue }
+      if (Is-LowValueWeb -url $url -title $title) { continue }
 
       $key = $url.ToLower()
       $e = Ensure-Entity -map $webMap -key $key -type "Web"
@@ -438,7 +473,11 @@ foreach ($line in $lines) {
 $webEntities = @(
   $webMap.Values |
     Where-Object { $_.LastActive -ge $cutoff -and $_.DurationSum -ge $MinDurationSeconds } |
-    Sort-Object LastActive -Descending
+    ForEach-Object {
+      $_ | Add-Member -NotePropertyName PriorityScore -NotePropertyValue (Get-PriorityScore -duration ([int]$_.DurationSum) -lastActive $_.LastActive -actionCount 0 -now $now) -Force
+      $_
+    } |
+    Sort-Object @{ Expression = "PriorityScore"; Descending = $true }, @{ Expression = "LastActive"; Descending = $true }
 )
 
 $docEntities = @(
@@ -448,13 +487,21 @@ $docEntities = @(
       $_.Path -and
       $_.DurationSum -ge $MinDurationSeconds
     } |
-    Sort-Object LastActive -Descending
+    ForEach-Object {
+      $_ | Add-Member -NotePropertyName PriorityScore -NotePropertyValue (Get-PriorityScore -duration ([int]$_.DurationSum) -lastActive $_.LastActive -actionCount ([int]$_.ActionCount) -now $now) -Force
+      $_
+    } |
+    Sort-Object @{ Expression = "PriorityScore"; Descending = $true }, @{ Expression = "LastActive"; Descending = $true }
 )
 
 $appEntities = @(
   $appMap.Values |
     Where-Object { $_.LastActive -ge $cutoff -and $_.DurationSum -ge $MinDurationSeconds } |
-    Sort-Object LastActive -Descending
+    ForEach-Object {
+      $_ | Add-Member -NotePropertyName PriorityScore -NotePropertyValue (Get-PriorityScore -duration ([int]$_.DurationSum) -lastActive $_.LastActive -actionCount 0 -now $now) -Force
+      $_
+    } |
+    Sort-Object @{ Expression = "PriorityScore"; Descending = $true }, @{ Expression = "LastActive"; Descending = $true }
 )
 
 $selectedWeb = @($webEntities | Select-Object -First $MaxWeb)
@@ -471,7 +518,7 @@ if ($selected.Count -lt $MaxTotal) {
   $leftovers = @(
     @($webEntities + $docEntities + $appEntities) |
       Where-Object { -not $selectedKeyMap.ContainsKey("$($_.Type)|$($_.Key)") } |
-      Sort-Object LastActive -Descending
+      Sort-Object @{ Expression = "PriorityScore"; Descending = $true }, @{ Expression = "LastActive"; Descending = $true }
   )
 
   $need = $MaxTotal - $selected.Count
@@ -480,10 +527,26 @@ if ($selected.Count -lt $MaxTotal) {
   }
 }
 
-$selected = @($selected | Sort-Object LastActive -Descending | Select-Object -First $MaxTotal)
-$selectedWeb = @($selected | Where-Object { $_.Type -eq "Web" } | Sort-Object LastActive -Descending)
-$selectedDoc = @($selected | Where-Object { $_.Type -eq "Doc" } | Sort-Object LastActive -Descending)
-$selectedApp = @($selected | Where-Object { $_.Type -eq "App" } | Sort-Object LastActive -Descending)
+$selected = @(
+  $selected |
+    Sort-Object @{ Expression = "PriorityScore"; Descending = $true }, @{ Expression = "LastActive"; Descending = $true } |
+    Select-Object -First $MaxTotal
+)
+$selectedWeb = @(
+  $selected |
+    Where-Object { $_.Type -eq "Web" } |
+    Sort-Object @{ Expression = "PriorityScore"; Descending = $true }, @{ Expression = "LastActive"; Descending = $true }
+)
+$selectedDoc = @(
+  $selected |
+    Where-Object { $_.Type -eq "Doc" } |
+    Sort-Object @{ Expression = "PriorityScore"; Descending = $true }, @{ Expression = "LastActive"; Descending = $true }
+)
+$selectedApp = @(
+  $selected |
+    Where-Object { $_.Type -eq "App" } |
+    Sort-Object @{ Expression = "PriorityScore"; Descending = $true }, @{ Expression = "LastActive"; Descending = $true }
+)
 
 $outLines = New-Object System.Collections.Generic.List[string]
 $outLines.Add("[Active Memory]")
@@ -529,6 +592,7 @@ foreach ($e in $selected) {
       lastActive = $active
       type = $class.Type
       confidence = $confidence
+      priority = [Math]::Round([double]$e.PriorityScore, 4)
       domain = $class.Domain
     }
     $semantic.web += [pscustomobject]$semanticWeb
@@ -557,6 +621,7 @@ foreach ($e in $selected) {
       lastActive = $active
       type = $class.Type
       confidence = $confidence
+      priority = [Math]::Round([double]$e.PriorityScore, 4)
     }
     $semantic.docs += [pscustomobject]$semanticDoc
     $semantic.entities += [pscustomobject]$semanticDoc
@@ -582,6 +647,7 @@ foreach ($e in $selected) {
       lastActive = $active
       type = $class.Type
       confidence = $confidence
+      priority = [Math]::Round([double]$e.PriorityScore, 4)
     }
     $semantic.apps += [pscustomobject]$semanticApp
     $semantic.entities += [pscustomobject]$semanticApp

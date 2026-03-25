@@ -35,7 +35,7 @@ while ($true) {
   try {
     $config = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
     $interval = [int]$config.indexer.intervalSeconds
-    if ($interval -lt 5) { $interval = 5 }
+    if ($interval -lt 1) { $interval = 1 }
     $semanticOutput = ""
     if ($config.indexer -and ($config.indexer.PSObject.Properties.Name -contains "semanticOutput")) {
       $semanticOutput = [string]$config.indexer.semanticOutput
