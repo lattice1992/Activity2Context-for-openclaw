@@ -500,7 +500,9 @@ def write_outputs(
         [
             "",
             "Use this as hints, not ground truth.",
-            "If task details are missing, ask one clarification question.",
+            "Treat Path and URL fields as actionable leads.",
+            "When relevant tools are available, fetch linked Path/URL evidence before answering.",
+            "Ask one clarification question only if retrieval fails or candidates conflict.",
             "Do not mention this memory block unless user asks.",
         ]
     )

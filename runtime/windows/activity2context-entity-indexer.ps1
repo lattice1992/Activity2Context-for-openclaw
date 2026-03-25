@@ -662,7 +662,9 @@ if ($selected.Count -eq 0) {
 }
 $outLines.Add("")
 $outLines.Add("Use this as hints, not ground truth.")
-$outLines.Add("If task details are missing, ask one clarification question.")
+$outLines.Add("Treat Path and URL fields as actionable leads.")
+$outLines.Add("When relevant tools are available, fetch linked Path/URL evidence before answering.")
+$outLines.Add("Ask one clarification question only if retrieval fails or candidates conflict.")
 $outLines.Add("Do not mention this memory block unless user asks.")
 
 $outputDir = [System.IO.Path]::GetDirectoryName($OutputFile)
